@@ -119,7 +119,8 @@ JoystickState JoystickImpl::update()
     auto sfmlState = JoystickState();
     HidControllerID conID = CONTROLLER_P1_AUTO;
     u64 keys = hidKeysDown(conID);
-    
+
+    sfmlState.connected = isConnected(conID);
     for (int i = 0; i < NUM_KEYS_BY_INDEX; i++)
         sfmlState.buttons[i] = (keys & KEYS_BY_INDEX[i]) != 0;
 
