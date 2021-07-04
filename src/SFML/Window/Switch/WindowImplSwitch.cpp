@@ -69,6 +69,7 @@ WindowImplSwitch::WindowImplSwitch(VideoMode mode, const String& title, unsigned
 ////////////////////////////////////////////////////////////
 WindowImplSwitch::~WindowImplSwitch()
 {
+    viExit();
 }
 
 
