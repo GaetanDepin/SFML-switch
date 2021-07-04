@@ -60,7 +60,7 @@ namespace
 {
     EGLDisplay getInitializedDisplay()
     {
-        
+
 #if defined(SFML_SYSTEM_ANDROID)
 
         // On Android, its native activity handles this for us
@@ -210,6 +210,11 @@ EglContext::~EglContext()
     if (m_surface != EGL_NO_SURFACE)
     {
         eglCheck(eglDestroySurface(m_display, m_surface));
+    }
+    if (m_display)
+    {
+        eglTerminate(m_display);
+        m_display = NULL;
     }
 }
 
