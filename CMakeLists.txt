@@ -163,6 +163,9 @@ if(SFML_OS_SWITCH)
 
     set (SFML_OPENGL_ES true)
 
+    # Workaround to remove the freetype include error
+    include_directories("/opt/devkitpro/portlibs/switch/include")
+    
     # this is a workaround to compile sfml-activity without the stl library as a dependency
     # we save the original compilation command line to restore it later in Macro.cmake
     set(CMAKE_CXX_CREATE_SHARED_LIBRARY_WITH_STL ${CMAKE_CXX_CREATE_SHARED_LIBRARY})
