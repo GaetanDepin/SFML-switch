@@ -32,7 +32,11 @@
 #endif
 #include <SFML/System/InputStream.hpp>
 #include <SFML/System/Err.hpp>
-#include <ft2build.h>
+#ifdef SFML_SYSTEM_SWITCH
+    #include <freetype2/ft2build.h>
+#else
+    #include <ft2build.h>
+#endif
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include FT_OUTLINE_H

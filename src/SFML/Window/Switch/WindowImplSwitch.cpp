@@ -60,6 +60,7 @@ WindowImplSwitch::WindowImplSwitch(VideoMode mode, const String& title, unsigned
     {
         err() << "viInitialize failed" << std::endl;
     }
+    hidInitializeTouchScreen(); // Init touch screen
 
     NWindow* defaultPtr = nwindowGetDefault();
     m_window = *defaultPtr;
@@ -84,7 +85,6 @@ WindowHandle WindowImplSwitch::getSystemHandle() const
 void WindowImplSwitch::processEvents()
 {
     appletMainLoop();
-    hidScanInput();
 }
 
 
