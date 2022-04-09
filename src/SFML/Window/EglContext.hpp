@@ -55,7 +55,7 @@ public:
     ////////////////////////////////////////////////////////////
     /// \brief Create a new context, not associated to a window
     ///
-    /// \param shared Context to share the new one with (can be NULL)
+    /// \param shared Context to share the new one with (can be a null pointer)
     ///
     ////////////////////////////////////////////////////////////
     EglContext(EglContext* shared);
@@ -69,10 +69,11 @@ public:
     /// \param bitsPerPixel Pixel depth, in bits per pixel
     ///
     ////////////////////////////////////////////////////////////
-    EglContext(EglContext* shared, const ContextSettings& settings, const WindowImpl* owner, unsigned int bitsPerPixel);
+    EglContext(EglContext* shared, const ContextSettings& settings, const WindowImpl& owner, unsigned int bitsPerPixel);
 
     ////////////////////////////////////////////////////////////
     /// \brief Create a new context that embeds its own rendering target
+    /// \warning This constructor is currently not implemented; use a different overload.
     ///
     /// \param shared   Context to share the new one with
     /// \param settings Creation parameters
@@ -86,7 +87,7 @@ public:
     /// \brief Destructor
     ///
     ////////////////////////////////////////////////////////////
-    ~EglContext();
+    ~EglContext() override;
 
     ////////////////////////////////////////////////////////////
     /// \brief Get the address of an OpenGL function
@@ -107,13 +108,13 @@ public:
     /// \return True on success, false if any error happened
     ///
     ////////////////////////////////////////////////////////////
-    virtual bool makeCurrent(bool current);
+    bool makeCurrent(bool current) override;
 
     ////////////////////////////////////////////////////////////
     /// \brief Display what has been rendered to the context so far
     ///
     ////////////////////////////////////////////////////////////
-    virtual void display();
+    void display() override;
 
     ////////////////////////////////////////////////////////////
     /// \brief Enable or disable vertical synchronization
@@ -126,12 +127,12 @@ public:
     /// \param enabled: True to enable v-sync, false to deactivate
     ///
     ////////////////////////////////////////////////////////////
-    virtual void setVerticalSyncEnabled(bool enabled);
+    void setVerticalSyncEnabled(bool enabled) override;
 
     ////////////////////////////////////////////////////////////
     /// \brief Create the context
     ///
-    /// \param shared       Context to share the new one with (can be NULL)
+    /// \param shared       Context to share the new one with (can be a null pointer)
     /// \param bitsPerPixel Pixel depth, in bits per pixel
     /// \param settings     Creation parameters
     ///

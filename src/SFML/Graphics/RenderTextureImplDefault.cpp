@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -29,7 +29,8 @@
 #include <SFML/Graphics/GLCheck.hpp>
 #include <SFML/Graphics/TextureSaver.hpp>
 #include <SFML/Window/Context.hpp>
-#include <SFML/System/Err.hpp>
+#include <SFML/Window/ContextSettings.hpp>
+#include <memory>
 
 
 namespace sf
@@ -38,7 +39,7 @@ namespace priv
 {
 ////////////////////////////////////////////////////////////
 RenderTextureImplDefault::RenderTextureImplDefault() :
-m_context(0),
+m_context(),
 m_width  (0),
 m_height (0)
 {
@@ -47,11 +48,7 @@ m_height (0)
 
 
 ////////////////////////////////////////////////////////////
-RenderTextureImplDefault::~RenderTextureImplDefault()
-{
-    // Destroy the context
-    delete m_context;
-}
+RenderTextureImplDefault::~RenderTextureImplDefault() = default;
 
 
 ////////////////////////////////////////////////////////////
@@ -72,7 +69,7 @@ bool RenderTextureImplDefault::create(unsigned int width, unsigned int height, u
     m_height = height;
 
     // Create the in-memory OpenGL context
-    m_context = new Context(settings, width, height);
+    m_context = std::make_unique<Context>(settings, width, height);
 
     return true;
 }
@@ -86,6 +83,13 @@ bool RenderTextureImplDefault::activate(bool active)
 
 
 ////////////////////////////////////////////////////////////
+bool RenderTextureImplDefault::isSrgb() const
+{
+    return m_context->getSettings().sRgbCapable;
+}
+
+
+////////////////////////////////////////////////////////////
 void RenderTextureImplDefault::updateTexture(unsigned int textureId)
 {
     // Make sure that the current texture binding will be preserved
@@ -93,7 +97,7 @@ void RenderTextureImplDefault::updateTexture(unsigned int textureId)
 
     // Copy the rendered pixels to the texture
     glCheck(glBindTexture(GL_TEXTURE_2D, textureId));
-    glCheck(glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_width, m_height));
+    glCheck(glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, static_cast<GLsizei>(m_width), static_cast<GLsizei>(m_height)));
 }
 
 } // namespace priv

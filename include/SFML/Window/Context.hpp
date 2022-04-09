@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -30,8 +30,7 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/Export.hpp>
 #include <SFML/Window/GlResource.hpp>
-#include <SFML/Window/ContextSettings.hpp>
-#include <SFML/System/NonCopyable.hpp>
+#include <memory>
 
 
 namespace sf
@@ -41,13 +40,15 @@ namespace priv
     class GlContext;
 }
 
-typedef void (*GlFunctionPointer)();
+struct ContextSettings;
+
+using GlFunctionPointer = void (*)();
 
 ////////////////////////////////////////////////////////////
 /// \brief Class holding a valid drawing context
 ///
 ////////////////////////////////////////////////////////////
-class SFML_WINDOW_API Context : GlResource, NonCopyable
+class SFML_WINDOW_API Context : GlResource
 {
 public:
 
@@ -68,6 +69,18 @@ public:
     ~Context();
 
     ////////////////////////////////////////////////////////////
+    /// \brief Deleted copy constructor
+    ///
+    ////////////////////////////////////////////////////////////
+    Context(const Context&) = delete;
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Deleted copy assignment
+    ///
+    ////////////////////////////////////////////////////////////
+    Context& operator=(const Context&) = delete;
+
+    ////////////////////////////////////////////////////////////
     /// \brief Activate or deactivate explicitly the context
     ///
     /// \param active True to activate, false to deactivate
@@ -75,7 +88,7 @@ public:
     /// \return True on success, false on failure
     ///
     ////////////////////////////////////////////////////////////
-    bool setActive(bool active);
+    [[nodiscard]] bool setActive(bool active);
 
     ////////////////////////////////////////////////////////////
     /// \brief Get the settings of the context
@@ -116,7 +129,7 @@ public:
     /// Contexts created e.g. by RenderTargets or for internal
     /// use will not be returned by this function.
     ///
-    /// \return The currently active context or NULL if none is active
+    /// \return The currently active context or a null pointer if none is active
     ///
     ////////////////////////////////////////////////////////////
     static const Context* getActiveContext();
@@ -150,7 +163,7 @@ private:
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    priv::GlContext* m_context; //!< Internal OpenGL context
+    std::unique_ptr<priv::GlContext> m_context; //!< Internal OpenGL context
 };
 
 } // namespace sf

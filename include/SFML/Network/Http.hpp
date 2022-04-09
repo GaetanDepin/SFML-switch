@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -31,7 +31,6 @@
 #include <SFML/Network/Export.hpp>
 #include <SFML/Network/IpAddress.hpp>
 #include <SFML/Network/TcpSocket.hpp>
-#include <SFML/System/NonCopyable.hpp>
 #include <SFML/System/Time.hpp>
 #include <map>
 #include <string>
@@ -43,7 +42,7 @@ namespace sf
 /// \brief A HTTP client
 ///
 ////////////////////////////////////////////////////////////
-class SFML_NETWORK_API Http : NonCopyable
+class SFML_NETWORK_API Http
 {
 public:
 
@@ -156,7 +155,7 @@ public:
         /// \return String containing the request, ready to be sent
         ///
         ////////////////////////////////////////////////////////////
-        std::string prepare() const;
+        [[nodiscard]] std::string prepare() const;
 
         ////////////////////////////////////////////////////////////
         /// \brief Check if the request defines a field
@@ -173,7 +172,7 @@ public:
         ////////////////////////////////////////////////////////////
         // Types
         ////////////////////////////////////////////////////////////
-        typedef std::map<std::string, std::string> FieldTable;
+        using FieldTable = std::map<std::string, std::string>; // Use an ordered map for predictable payloads
 
         ////////////////////////////////////////////////////////////
         // Member data
@@ -333,7 +332,7 @@ public:
         ////////////////////////////////////////////////////////////
         // Types
         ////////////////////////////////////////////////////////////
-        typedef std::map<std::string, std::string> FieldTable;
+        using FieldTable = std::map<std::string, std::string>; // Use an ordered map for predictable payloads
 
         ////////////////////////////////////////////////////////////
         // Member data
@@ -366,6 +365,18 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     Http(const std::string& host, unsigned short port = 0);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Deleted copy constructor
+    ///
+    ////////////////////////////////////////////////////////////
+    Http(const Http&) = delete;
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Deleted copy assignment
+    ///
+    ////////////////////////////////////////////////////////////
+    Http& operator=(const Http&) = delete;
 
     ////////////////////////////////////////////////////////////
     /// \brief Set the target host
@@ -402,7 +413,7 @@ public:
     /// \return Server's response
     ///
     ////////////////////////////////////////////////////////////
-    Response sendRequest(const Request& request, Time timeout = Time::Zero);
+    [[nodiscard]] Response sendRequest(const Request& request, Time timeout = Time::Zero);
 
 private:
 

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -30,7 +30,6 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Network/Export.hpp>
 #include <SFML/Network/SocketHandle.hpp>
-#include <SFML/System/NonCopyable.hpp>
 #include <vector>
 
 
@@ -42,7 +41,7 @@ class SocketSelector;
 /// \brief Base class for all the socket types
 ///
 ////////////////////////////////////////////////////////////
-class SFML_NETWORK_API Socket : NonCopyable
+class SFML_NETWORK_API Socket
 {
 public:
 
@@ -75,6 +74,18 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     virtual ~Socket();
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Deleted copy constructor
+    ///
+    ////////////////////////////////////////////////////////////
+    Socket(const Socket&) = delete;
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Deleted copy assignment
+    ///
+    ////////////////////////////////////////////////////////////
+    Socket& operator=(const Socket&) = delete;
 
     ////////////////////////////////////////////////////////////
     /// \brief Set the blocking state of the socket

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -31,7 +31,6 @@
 #include <SFML/Graphics/Export.hpp>
 #include <SFML/Graphics/Drawable.hpp>
 #include <SFML/Graphics/Transformable.hpp>
-#include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/VertexArray.hpp>
 #include <SFML/System/String.hpp>
@@ -41,6 +40,8 @@
 
 namespace sf
 {
+class Font;
+
 ////////////////////////////////////////////////////////////
 /// \brief Graphical text that can be drawn to a render target
 ///
@@ -86,6 +87,30 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     Text(const String& string, const Font& font, unsigned int characterSize = 30);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Copy constructor
+    ///
+    ////////////////////////////////////////////////////////////
+    Text(const Text&);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Copy assignment
+    ///
+    ////////////////////////////////////////////////////////////
+    Text& operator=(const Text&);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Move constructor
+    ///
+    ////////////////////////////////////////////////////////////
+    Text(Text&&) noexcept;
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Move assignment
+    ///
+    ////////////////////////////////////////////////////////////
+    Text& operator=(Text&&) noexcept;
 
     ////////////////////////////////////////////////////////////
     /// \brief Set the text's string
@@ -202,24 +227,6 @@ public:
     ///
     /// \see getFillColor
     ///
-    /// \deprecated There is now fill and outline colors instead
-    /// of a single global color.
-    /// Use setFillColor() or setOutlineColor() instead.
-    ///
-    ////////////////////////////////////////////////////////////
-    SFML_DEPRECATED void setColor(const Color& color);
-
-    ////////////////////////////////////////////////////////////
-    /// \brief Set the fill color of the text
-    ///
-    /// By default, the text's fill color is opaque white.
-    /// Setting the fill color to a transparent color with an outline
-    /// will cause the outline to be displayed in the fill area of the text.
-    ///
-    /// \param color New fill color of the text
-    ///
-    /// \see getFillColor
-    ///
     ////////////////////////////////////////////////////////////
     void setFillColor(const Color& color);
 
@@ -272,7 +279,7 @@ public:
     ////////////////////////////////////////////////////////////
     /// \brief Get the text's font
     ///
-    /// If the text has no font attached, a NULL pointer is returned.
+    /// If the text has no font attached, a null pointer is returned.
     /// The returned pointer is const, which means that you
     /// cannot modify the font when you get it from this function.
     ///
@@ -322,20 +329,6 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     Uint32 getStyle() const;
-
-    ////////////////////////////////////////////////////////////
-    /// \brief Get the fill color of the text
-    ///
-    /// \return Fill color of the text
-    ///
-    /// \see setFillColor
-    ///
-    /// \deprecated There is now fill and outline colors instead
-    /// of a single global color.
-    /// Use getFillColor() or getOutlineColor() instead.
-    ///
-    ////////////////////////////////////////////////////////////
-    SFML_DEPRECATED const Color& getColor() const;
 
     ////////////////////////////////////////////////////////////
     /// \brief Get the fill color of the text
@@ -421,7 +414,7 @@ private:
     /// \param states Current render states
     ///
     ////////////////////////////////////////////////////////////
-    virtual void draw(RenderTarget& target, RenderStates states) const;
+    void draw(RenderTarget& target, const RenderStates& states) const override;
 
     ////////////////////////////////////////////////////////////
     /// \brief Make sure the text's geometry is updated

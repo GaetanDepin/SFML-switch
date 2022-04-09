@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -41,7 +41,10 @@ namespace
     struct VulkanLibraryWrapper
     {
         VulkanLibraryWrapper() :
-        library(NULL)
+        library(nullptr),
+        vkGetInstanceProcAddr(nullptr),
+        vkEnumerateInstanceLayerProperties(nullptr),
+        vkEnumerateInstanceExtensionProperties(nullptr)
         {
         }
 
@@ -65,21 +68,21 @@ namespace
             if (!loadEntryPoint(vkGetInstanceProcAddr, "vkGetInstanceProcAddr"))
             {
                 dlclose(library);
-                library = NULL;
+                library = nullptr;
                 return false;
             }
 
             if (!loadEntryPoint(vkEnumerateInstanceLayerProperties, "vkEnumerateInstanceLayerProperties"))
             {
                 dlclose(library);
-                library = NULL;
+                library = nullptr;
                 return false;
             }
 
             if (!loadEntryPoint(vkEnumerateInstanceExtensionProperties, "vkEnumerateInstanceExtensionProperties"))
             {
                 dlclose(library);
-                library = NULL;
+                library = nullptr;
                 return false;
             }
 
@@ -91,7 +94,7 @@ namespace
         {
             entryPoint = reinterpret_cast<T>(dlsym(library, name));
 
-            return (entryPoint != NULL);
+            return (entryPoint != nullptr);
         }
 
         void* library;
@@ -133,23 +136,23 @@ bool VulkanImplX11::isAvailable(bool requireGraphics)
 
             uint32_t extensionCount = 0;
 
-            wrapper.vkEnumerateInstanceExtensionProperties(0, &extensionCount, NULL);
+            wrapper.vkEnumerateInstanceExtensionProperties(0, &extensionCount, nullptr);
 
             extensionProperties.resize(extensionCount);
 
-            wrapper.vkEnumerateInstanceExtensionProperties(0, &extensionCount, &extensionProperties[0]);
+            wrapper.vkEnumerateInstanceExtensionProperties(0, &extensionCount, extensionProperties.data());
 
             // Check if the necessary extensions are available
             bool has_VK_KHR_surface = false;
             bool has_VK_KHR_platform_surface = false;
 
-            for (std::vector<VkExtensionProperties>::const_iterator iter = extensionProperties.begin(); iter != extensionProperties.end(); ++iter)
+            for (const VkExtensionProperties& properties : extensionProperties)
             {
-                if (!std::strcmp(iter->extensionName, VK_KHR_SURFACE_EXTENSION_NAME))
+                if (!std::strcmp(properties.extensionName, VK_KHR_SURFACE_EXTENSION_NAME))
                 {
                     has_VK_KHR_surface = true;
                 }
-                else if (!std::strcmp(iter->extensionName, VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+                else if (!std::strcmp(properties.extensionName, VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
                 {
                     has_VK_KHR_platform_surface = true;
                 }
@@ -201,7 +204,7 @@ bool VulkanImplX11::createVulkanSurface(const VkInstance& instance, WindowHandle
     // Make a copy of the instance handle since we get it passed as a reference
     VkInstance inst = instance;
 
-    PFN_vkCreateXlibSurfaceKHR vkCreateXlibSurfaceKHR = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(wrapper.vkGetInstanceProcAddr(inst, "vkCreateXlibSurfaceKHR"));
+    auto vkCreateXlibSurfaceKHR = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(wrapper.vkGetInstanceProcAddr(inst, "vkCreateXlibSurfaceKHR"));
 
     if (!vkCreateXlibSurfaceKHR)
         return false;

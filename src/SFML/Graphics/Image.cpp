@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -32,6 +32,7 @@
     #include <SFML/System/Android/ResourceStream.hpp>
 #endif
 #include <algorithm>
+#include <ostream>
 #include <cstring>
 
 
@@ -53,15 +54,31 @@ Image::~Image()
 
 
 ////////////////////////////////////////////////////////////
+Image::Image(const Image&) = default;
+
+
+////////////////////////////////////////////////////////////
+Image& Image::operator=(const Image&) = default;
+
+
+////////////////////////////////////////////////////////////
+Image::Image(Image&&) noexcept = default;
+
+
+////////////////////////////////////////////////////////////
+Image& Image::operator=(Image&&) noexcept = default;
+
+
+////////////////////////////////////////////////////////////
 void Image::create(unsigned int width, unsigned int height, const Color& color)
 {
     if (width && height)
     {
         // Create a new pixel buffer first for exception safety's sake
-        std::vector<Uint8> newPixels(width * height * 4);
-    
+        std::vector<Uint8> newPixels(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
+
         // Fill it with the specified color
-        Uint8* ptr = &newPixels[0];
+        Uint8* ptr = newPixels.data();
         Uint8* end = ptr + newPixels.size();
         while (ptr < end)
         {
@@ -70,10 +87,10 @@ void Image::create(unsigned int width, unsigned int height, const Color& color)
             *ptr++ = color.b;
             *ptr++ = color.a;
         }
-    
+
         // Commit the new pixel buffer
         m_pixels.swap(newPixels);
-        
+
         // Assign the new size
         m_size.x = width;
         m_size.y = height;
@@ -82,7 +99,7 @@ void Image::create(unsigned int width, unsigned int height, const Color& color)
     {
         // Dump the pixel buffer
         std::vector<Uint8>().swap(m_pixels);
-        
+
         // Assign the new size
         m_size.x = 0;
         m_size.y = 0;
@@ -97,10 +114,10 @@ void Image::create(unsigned int width, unsigned int height, const Uint8* pixels)
     {
         // Create a new pixel buffer first for exception safety's sake
         std::vector<Uint8> newPixels(pixels, pixels + width * height * 4);
-        
+
         // Commit the new pixel buffer
         m_pixels.swap(newPixels);
-        
+
         // Assign the new size
         m_size.x = width;
         m_size.y = height;
@@ -109,7 +126,7 @@ void Image::create(unsigned int width, unsigned int height, const Uint8* pixels)
     {
         // Dump the pixel buffer
         std::vector<Uint8>().swap(m_pixels);
-        
+
         // Assign the new size
         m_size.x = 0;
         m_size.y = 0;
@@ -118,7 +135,7 @@ void Image::create(unsigned int width, unsigned int height, const Uint8* pixels)
 
 
 ////////////////////////////////////////////////////////////
-bool Image::loadFromFile(const std::string& filename)
+bool Image::loadFromFile(const std::filesystem::path& filename)
 {
     #ifndef SFML_SYSTEM_ANDROID
 
@@ -148,9 +165,15 @@ bool Image::loadFromStream(InputStream& stream)
 
 
 ////////////////////////////////////////////////////////////
-bool Image::saveToFile(const std::string& filename) const
+bool Image::saveToFile(const std::filesystem::path& filename) const
 {
     return priv::ImageLoader::getInstance().saveImageToFile(filename, m_pixels, m_size);
+}
+
+////////////////////////////////////////////////////////////
+bool Image::saveToMemory(std::vector<sf::Uint8>& output, const std::string& format) const
+{
+    return priv::ImageLoader::getInstance().saveImageToMemory(format, output, m_pixels, m_size);
 }
 
 
@@ -168,7 +191,7 @@ void Image::createMaskFromColor(const Color& color, Uint8 alpha)
     if (!m_pixels.empty())
     {
         // Replace the alpha of the pixels that match the transparent color
-        Uint8* ptr = &m_pixels[0];
+        Uint8* ptr = m_pixels.data();
         Uint8* end = ptr + m_pixels.size();
         while (ptr < end)
         {
@@ -193,20 +216,20 @@ void Image::copy(const Image& source, unsigned int destX, unsigned int destY, co
     {
         srcRect.left   = 0;
         srcRect.top    = 0;
-        srcRect.width  = source.m_size.x;
-        srcRect.height = source.m_size.y;
+        srcRect.width  = static_cast<int>(source.m_size.x);
+        srcRect.height = static_cast<int>(source.m_size.y);
     }
     else
     {
         if (srcRect.left   < 0) srcRect.left = 0;
         if (srcRect.top    < 0) srcRect.top  = 0;
-        if (srcRect.width  > static_cast<int>(source.m_size.x)) srcRect.width  = source.m_size.x;
-        if (srcRect.height > static_cast<int>(source.m_size.y)) srcRect.height = source.m_size.y;
+        if (srcRect.width  > static_cast<int>(source.m_size.x)) srcRect.width  = static_cast<int>(source.m_size.x);
+        if (srcRect.height > static_cast<int>(source.m_size.y)) srcRect.height = static_cast<int>(source.m_size.y);
     }
 
     // Then find the valid bounds of the destination rectangle
-    int width  = srcRect.width;
-    int height = srcRect.height;
+    auto width  = static_cast<unsigned int>(srcRect.width);
+    auto height = static_cast<unsigned int>(srcRect.height);
     if (destX + width  > m_size.x) width  = m_size.x - destX;
     if (destY + height > m_size.y) height = m_size.y - destY;
 
@@ -215,20 +238,20 @@ void Image::copy(const Image& source, unsigned int destX, unsigned int destY, co
         return;
 
     // Precompute as much as possible
-    int          pitch     = width * 4;
-    int          rows      = height;
-    int          srcStride = source.m_size.x * 4;
-    int          dstStride = m_size.x * 4;
-    const Uint8* srcPixels = &source.m_pixels[0] + (srcRect.left + srcRect.top * source.m_size.x) * 4;
-    Uint8*       dstPixels = &m_pixels[0] + (destX + destY * m_size.x) * 4;
+    std::size_t  pitch     = static_cast<std::size_t>(width) * 4;
+    unsigned int rows      = height;
+    int          srcStride = static_cast<int>(source.m_size.x) * 4;
+    int          dstStride = static_cast<int>(m_size.x) * 4;
+    const Uint8* srcPixels = source.m_pixels.data() + (static_cast<unsigned int>(srcRect.left) + static_cast<unsigned int>(srcRect.top) * source.m_size.x) * 4;
+    Uint8*       dstPixels = m_pixels.data() + (destX + destY * m_size.x) * 4;
 
     // Copy the pixels
     if (applyAlpha)
     {
         // Interpolation using alpha values, pixel by pixel (slower)
-        for (int i = 0; i < rows; ++i)
+        for (unsigned int i = 0; i < rows; ++i)
         {
-            for (int j = 0; j < width; ++j)
+            for (unsigned int j = 0; j < width; ++j)
             {
                 // Get a direct pointer to the components of the current pixel
                 const Uint8* src = srcPixels + j * 4;
@@ -236,10 +259,10 @@ void Image::copy(const Image& source, unsigned int destX, unsigned int destY, co
 
                 // Interpolate RGBA components using the alpha value of the source pixel
                 Uint8 alpha = src[3];
-                dst[0] = (src[0] * alpha + dst[0] * (255 - alpha)) / 255;
-                dst[1] = (src[1] * alpha + dst[1] * (255 - alpha)) / 255;
-                dst[2] = (src[2] * alpha + dst[2] * (255 - alpha)) / 255;
-                dst[3] = alpha + dst[3] * (255 - alpha) / 255;
+                dst[0] = static_cast<Uint8>((src[0] * alpha + dst[0] * (255 - alpha)) / 255);
+                dst[1] = static_cast<Uint8>((src[1] * alpha + dst[1] * (255 - alpha)) / 255);
+                dst[2] = static_cast<Uint8>((src[2] * alpha + dst[2] * (255 - alpha)) / 255);
+                dst[3] = static_cast<Uint8>(alpha + dst[3] * (255 - alpha) / 255);
             }
 
             srcPixels += srcStride;
@@ -249,7 +272,7 @@ void Image::copy(const Image& source, unsigned int destX, unsigned int destY, co
     else
     {
         // Optimized copy ignoring alpha values, row by row (faster)
-        for (int i = 0; i < rows; ++i)
+        for (unsigned int i = 0; i < rows; ++i)
         {
             std::memcpy(dstPixels, srcPixels, pitch);
             srcPixels += srcStride;
@@ -283,12 +306,12 @@ const Uint8* Image::getPixelsPtr() const
 {
     if (!m_pixels.empty())
     {
-        return &m_pixels[0];
+        return m_pixels.data();
     }
     else
     {
         err() << "Trying to access the pixels of an empty image" << std::endl;
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -302,8 +325,8 @@ void Image::flipHorizontally()
 
         for (std::size_t y = 0; y < m_size.y; ++y)
         {
-            std::vector<Uint8>::iterator left = m_pixels.begin() + y * rowSize;
-            std::vector<Uint8>::iterator right = m_pixels.begin() + (y + 1) * rowSize - 4;
+            auto left = m_pixels.begin() + static_cast<std::vector<Uint8>::iterator::difference_type>(y * rowSize);
+            auto right = m_pixels.begin() + static_cast<std::vector<Uint8>::iterator::difference_type>((y + 1) * rowSize - 4);
 
             for (std::size_t x = 0; x < m_size.x / 2; ++x)
             {
@@ -322,10 +345,10 @@ void Image::flipVertically()
 {
     if (!m_pixels.empty())
     {
-        std::size_t rowSize = m_size.x * 4;
+        auto rowSize = static_cast<std::vector<Uint8>::iterator::difference_type>(m_size.x * 4);
 
-        std::vector<Uint8>::iterator top = m_pixels.begin();
-        std::vector<Uint8>::iterator bottom = m_pixels.end() - rowSize;
+        auto top = m_pixels.begin();
+        auto bottom = m_pixels.end() - rowSize;
 
         for (std::size_t y = 0; y < m_size.y / 2; ++y)
         {

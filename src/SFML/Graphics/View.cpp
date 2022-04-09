@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -35,12 +35,12 @@ namespace sf
 View::View() :
 m_center             (),
 m_size               (),
-m_rotation           (0),
-m_viewport           (0, 0, 1, 1),
+m_rotation           (),
+m_viewport           ({0, 0}, {1, 1}),
 m_transformUpdated   (false),
 m_invTransformUpdated(false)
 {
-    reset(FloatRect(0, 0, 1000, 1000));
+    reset(FloatRect({0, 0}, {1000, 1000}));
 }
 
 
@@ -48,8 +48,8 @@ m_invTransformUpdated(false)
 View::View(const FloatRect& rectangle) :
 m_center             (),
 m_size               (),
-m_rotation           (0),
-m_viewport           (0, 0, 1, 1),
+m_rotation           (),
+m_viewport           ({0, 0}, {1, 1}),
 m_transformUpdated   (false),
 m_invTransformUpdated(false)
 {
@@ -61,29 +61,21 @@ m_invTransformUpdated(false)
 View::View(const Vector2f& center, const Vector2f& size) :
 m_center             (center),
 m_size               (size),
-m_rotation           (0),
-m_viewport           (0, 0, 1, 1),
+m_rotation           (),
+m_viewport           ({0, 0}, {1, 1}),
 m_transformUpdated   (false),
 m_invTransformUpdated(false)
 {
 
 }
 
-////////////////////////////////////////////////////////////
-void View::setCenter(float x, float y)
-{
-    m_center.x = x;
-    m_center.y = y;
-
-    m_transformUpdated    = false;
-    m_invTransformUpdated = false;
-}
-
 
 ////////////////////////////////////////////////////////////
 void View::setCenter(const Vector2f& center)
 {
-    setCenter(center.x, center.y);
+    m_center = center;
+    m_transformUpdated    = false;
+    m_invTransformUpdated = false;
 }
 
 
@@ -106,11 +98,9 @@ void View::setSize(const Vector2f& size)
 
 
 ////////////////////////////////////////////////////////////
-void View::setRotation(float angle)
+void View::setRotation(Angle angle)
 {
-    m_rotation = static_cast<float>(fmod(angle, 360));
-    if (m_rotation < 0)
-        m_rotation += 360.f;
+    m_rotation = angle.wrapUnsigned();
 
     m_transformUpdated    = false;
     m_invTransformUpdated = false;
@@ -131,7 +121,7 @@ void View::reset(const FloatRect& rectangle)
     m_center.y = rectangle.top + rectangle.height / 2.f;
     m_size.x   = rectangle.width;
     m_size.y   = rectangle.height;
-    m_rotation = 0;
+    m_rotation = Angle::Zero;
 
     m_transformUpdated    = false;
     m_invTransformUpdated = false;
@@ -153,7 +143,7 @@ const Vector2f& View::getSize() const
 
 
 ////////////////////////////////////////////////////////////
-float View::getRotation() const
+Angle View::getRotation() const
 {
     return m_rotation;
 }
@@ -167,13 +157,6 @@ const FloatRect& View::getViewport() const
 
 
 ////////////////////////////////////////////////////////////
-void View::move(float offsetX, float offsetY)
-{
-    setCenter(m_center.x + offsetX, m_center.y + offsetY);
-}
-
-
-////////////////////////////////////////////////////////////
 void View::move(const Vector2f& offset)
 {
     setCenter(m_center + offset);
@@ -181,7 +164,7 @@ void View::move(const Vector2f& offset)
 
 
 ////////////////////////////////////////////////////////////
-void View::rotate(float angle)
+void View::rotate(Angle angle)
 {
     setRotation(m_rotation + angle);
 }
@@ -201,9 +184,9 @@ const Transform& View::getTransform() const
     if (!m_transformUpdated)
     {
         // Rotation components
-        float angle  = m_rotation * 3.141592654f / 180.f;
-        float cosine = static_cast<float>(std::cos(angle));
-        float sine   = static_cast<float>(std::sin(angle));
+        float angle  = m_rotation.asRadians();
+        float cosine = std::cos(angle);
+        float sine   = std::sin(angle);
         float tx     = -m_center.x * cosine - m_center.y * sine + m_center.x;
         float ty     =  m_center.x * sine - m_center.y * cosine + m_center.y;
 

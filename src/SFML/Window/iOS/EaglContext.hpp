@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -55,7 +55,7 @@ public:
     ////////////////////////////////////////////////////////////
     /// \brief Create a new context, not associated to a window
     ///
-    /// \param shared Context to share the new one with (can be NULL)
+    /// \param shared Context to share the new one with (can be a null pointer)
     ///
     ////////////////////////////////////////////////////////////
     EaglContext(EaglContext* shared);
@@ -70,7 +70,7 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     EaglContext(EaglContext* shared, const ContextSettings& settings,
-                const WindowImpl* owner, unsigned int bitsPerPixel);
+                const WindowImpl& owner, unsigned int bitsPerPixel);
 
     ////////////////////////////////////////////////////////////
     /// \brief Create a new context that embeds its own rendering target
@@ -115,7 +115,7 @@ public:
     /// \brief Display what has been rendered to the context so far
     ///
     ////////////////////////////////////////////////////////////
-    virtual void display();
+    void display() override;
 
     ////////////////////////////////////////////////////////////
     /// \brief Enable or disable vertical synchronization
@@ -128,7 +128,7 @@ public:
     /// \param enabled: True to enable v-sync, false to deactivate
     ///
     ////////////////////////////////////////////////////////////
-    virtual void setVerticalSyncEnabled(bool enabled);
+    void setVerticalSyncEnabled(bool enabled) override;
 
 protected:
 
@@ -141,21 +141,21 @@ protected:
     /// \return True on success, false if any error happened
     ///
     ////////////////////////////////////////////////////////////
-    virtual bool makeCurrent(bool current);
+    bool makeCurrent(bool current) override;
 
 private:
 
     ////////////////////////////////////////////////////////////
     /// \brief Create the context
     ///
-    /// \param shared       Context to share the new one with (can be NULL)
-    /// \param window       Window to attach the context to (can be NULL)
+    /// \param shared       Context to share the new one with (can be a null pointer)
+    /// \param window       Window to attach the context to
     /// \param bitsPerPixel Pixel depth, in bits per pixel
     /// \param settings     Creation parameters
     ///
     ////////////////////////////////////////////////////////////
     void createContext(EaglContext* shared,
-                       const WindowImplUIKit* window,
+                       const WindowImplUIKit& window,
                        unsigned int bitsPerPixel,
                        const ContextSettings& settings);
 

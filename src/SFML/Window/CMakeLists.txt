@@ -81,7 +81,7 @@ if(SFML_OS_WINDOWS)
 
     # make sure that we use the Unicode version of the Win API functions
     add_definitions(-DUNICODE -D_UNICODE)
-elseif(SFML_OS_LINUX OR SFML_OS_FREEBSD OR SFML_OS_OPENBSD)
+elseif(SFML_OS_LINUX OR SFML_OS_FREEBSD OR SFML_OS_OPENBSD OR SFML_OS_NETBSD)
     set(PLATFORM_SRC
         ${SRCROOT}/Unix/CursorImpl.hpp
         ${SRCROOT}/Unix/CursorImpl.cpp
@@ -124,6 +124,13 @@ elseif(SFML_OS_LINUX OR SFML_OS_FREEBSD OR SFML_OS_OPENBSD)
             ${SRCROOT}/OpenBSD/JoystickImpl.cpp
             ${SRCROOT}/OpenBSD/JoystickImpl.hpp
         )
+    elseif(SFML_OS_NETBSD)
+        set(PLATFORM_SRC
+            ${PLATFORM_SRC}
+            ${SRCROOT}/NetBSD/JoystickImpl.cpp
+            ${SRCROOT}/NetBSD/JoystickImpl.hpp
+        )
+
     endif()
     source_group("unix" FILES ${PLATFORM_SRC})
 elseif(SFML_OS_MACOSX)
@@ -175,7 +182,7 @@ elseif(SFML_OS_MACOSX)
         ${SRCROOT}/OSX/WindowImplCocoa.hpp
         ${SRCROOT}/OSX/WindowImplCocoa.mm
         ${SRCROOT}/OSX/WindowImplDelegateProtocol.h
-        ${SRCROOT}/OSX/AutoreleasePoolWrapper.h
+        ${SRCROOT}/OSX/AutoreleasePoolWrapper.hpp
         ${SRCROOT}/OSX/AutoreleasePoolWrapper.mm
     )
     source_group("mac" FILES ${PLATFORM_SRC})
@@ -244,12 +251,12 @@ elseif(SFML_OS_SWITCH)
 endif()
 
 # define the sfml-window target
-sfml_add_library(sfml-window
+sfml_add_library(Window
                  SOURCES ${SRC} ${PLATFORM_SRC})
-target_link_libraries(sfml-window PUBLIC sfml-system)
+target_link_libraries(sfml-window PUBLIC SFML::System)
 
 # glad sources
-target_include_directories(sfml-window PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/glad/include")
+target_include_directories(sfml-window SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/glad/include")
 
 # When static linking on macOS, we need to add this flag for objective C to work
 if ((NOT BUILD_SHARED_LIBS) AND SFML_OS_MACOSX)
@@ -257,11 +264,11 @@ if ((NOT BUILD_SHARED_LIBS) AND SFML_OS_MACOSX)
 endif()
 
 # Vulkan headers
-target_include_directories(sfml-window PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/vulkan")
+target_include_directories(sfml-window SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/vulkan")
 
 # find and setup usage for external libraries
-if(SFML_OS_LINUX OR SFML_OS_FREEBSD OR SFML_OPENBSD)
-    sfml_find_package(X11 INCLUDE "X11_INCLUDE_DIR" LINK "X11_X11_LIB" "X11_Xrandr_LIB")
+if(SFML_OS_LINUX OR SFML_OS_FREEBSD OR SFML_OS_OPENBSD OR SFML_OS_NETBSD)
+    sfml_find_package(X11 INCLUDE "X11_INCLUDE_DIR" LINK "X11_X11_LIB" "X11_Xrandr_LIB" "X11_Xcursor_LIB")
     target_link_libraries(sfml-window PRIVATE X11)
 endif()
 
@@ -291,7 +298,7 @@ if(SFML_OS_WINDOWS AND NOT SFML_COMPILER_MSVC)
     include(CheckIncludeFile)
     check_include_file(dinput.h DINPUT_H_FOUND)
     if(NOT DINPUT_H_FOUND)
-        target_include_directories(sfml-window PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/mingw")
+        target_include_directories(sfml-window SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/mingw")
     endif()
 endif()
 

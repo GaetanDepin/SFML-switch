@@ -3,16 +3,17 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #define GLAD_VULKAN_IMPLEMENTATION
-#include "vulkan.h"
+#include <vulkan.h>
 
 // Include graphics because we use sf::Image for loading images
 #include <SFML/Graphics.hpp>
 
 #include <SFML/Window.hpp>
-#include <vector>
+#include <iostream>
 #include <limits>
-#include <cstring>
+#include <vector>
 #include <cmath>
+#include <cstring>
 
 
 ////////////////////////////////////////////////////////////
@@ -20,17 +21,17 @@
 ////////////////////////////////////////////////////////////
 namespace
 {
-    typedef float Vec3[3];
-    typedef float Matrix[4][4];
+    using Vec3 = float[3];
+    using Matrix = float[4][4];
 
     // Multiply 2 matrices
     void matrixMultiply(Matrix& result, const Matrix& left, const Matrix& right)
     {
         Matrix temp;
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; ++i)
         {
-            for (int j = 0; j < 4; j++)
+            for (int j = 0; j < 4; ++j)
                 temp[i][j] = left[0][j] * right[i][0] + left[1][j] * right[i][1] + left[2][j] * right[i][2] + left[3][j] * right[i][3];
         }
 
@@ -38,39 +39,42 @@ namespace
     }
 
     // Rotate a matrix around the x-axis
-    void matrixRotateX(Matrix& result, float angle)
+    void matrixRotateX(Matrix& result, sf::Angle angle)
     {
+        float rad = angle.asRadians();
         Matrix matrix = {
-            {1.f,   0.f,             0.f,             0.f},
-            {0.f,   std::cos(angle), std::sin(angle), 0.f},
-            {0.f,  -std::sin(angle), std::cos(angle), 0.f},
-            {0.f,   0.f,             0.f,             1.f}
+            {1.f,   0.f,           0.f,           0.f},
+            {0.f,   std::cos(rad), std::sin(rad), 0.f},
+            {0.f,  -std::sin(rad), std::cos(rad), 0.f},
+            {0.f,   0.f,           0.f,           1.f}
         };
 
         matrixMultiply(result, result, matrix);
     }
 
     // Rotate a matrix around the y-axis
-    void matrixRotateY(Matrix& result, float angle)
+    void matrixRotateY(Matrix& result, sf::Angle angle)
     {
+        float rad = angle.asRadians();
         Matrix matrix = {
-            { std::cos(angle), 0.f, std::sin(angle), 0.f},
-            { 0.f,             1.f, 0.f,             0.f},
-            {-std::sin(angle), 0.f, std::cos(angle), 0.f},
-            { 0.f,             0.f, 0.f,             1.f}
+            { std::cos(rad), 0.f, std::sin(rad), 0.f},
+            { 0.f,           1.f, 0.f,           0.f},
+            {-std::sin(rad), 0.f, std::cos(rad), 0.f},
+            { 0.f,           0.f, 0.f,           1.f}
         };
 
         matrixMultiply(result, result, matrix);
     }
 
     // Rotate a matrix around the z-axis
-    void matrixRotateZ(Matrix& result, float angle)
+    void matrixRotateZ(Matrix& result, sf::Angle angle)
     {
+        float rad = angle.asRadians();
         Matrix matrix = {
-            { std::cos(angle), std::sin(angle), 0.f, 0.f},
-            {-std::sin(angle), std::cos(angle), 0.f, 0.f},
-            { 0.f,             0.f,             1.f, 0.f},
-            { 0.f,             0.f,             0.f, 1.f}
+            { std::cos(rad), std::sin(rad), 0.f, 0.f},
+            {-std::sin(rad), std::cos(rad), 0.f, 0.f},
+            { 0.f,           0.f,           1.f, 0.f},
+            { 0.f,           0.f,           0.f, 1.f}
         };
 
         matrixMultiply(result, result, matrix);
@@ -89,8 +93,8 @@ namespace
         // Normalize
         float factor = 1.0f / std::sqrt(forward[0] * forward[0] + forward[1] * forward[1] + forward[2] * forward[2]);
 
-        for(int i = 0; i < 3; i++)
-            forward[i] = forward[i] * factor;
+        for(float& f : forward)
+            f *= factor;
 
         // Side vector (Forward cross product Up)
         Vec3 side = {
@@ -102,8 +106,8 @@ namespace
         // Normalize
         factor = 1.0f / std::sqrt(side[0] * side[0] + side[1] * side[1] + side[2] * side[2]);
 
-        for(int i = 0; i < 3; i++)
-            side[i] = side[i] * factor;
+        for(float& f : side)
+            f *= factor;
 
         result[0][0] =  side[0];
         result[0][1] =  side[1] * forward[2] - side[2] * forward[1];
@@ -127,9 +131,9 @@ namespace
     }
 
     // Construct a perspective projection matrix
-    void matrixPerspective(Matrix& result, float fov, float aspect, float nearPlane, float farPlane)
+    void matrixPerspective(Matrix& result, sf::Angle fov, float aspect, float nearPlane, float farPlane)
     {
-        const float a = 1.f / std::tan(fov / 2.f);
+        const float a = 1.f / std::tan(fov.asRadians() / 2.f);
 
         result[0][0] = a / aspect;
         result[0][1] = 0.f;
@@ -162,13 +166,13 @@ namespace
     // Helper function we pass to GLAD to load Vulkan functions via SFML
     GLADapiproc getVulkanFunction(const char* name)
     {
-        return reinterpret_cast<GLADapiproc>(sf::Vulkan::getFunction(name));
+        return sf::Vulkan::getFunction(name);
     }
 
     // Debug we pass to Vulkan to call when it detects warnings or errors
     VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* pMessage, void*)
     {
-        sf::err() << pMessage << std::endl;
+        std::cerr << pMessage << std::endl;
 
         return VK_FALSE;
     }
@@ -266,23 +270,23 @@ public:
         cleanupSwapchain();
 
         // Vulkan teardown procedure
-        for (std::size_t i = 0; i < fences.size(); i++)
-            vkDestroyFence(device, fences[i], 0);
+        for (VkFence fence : fences)
+            vkDestroyFence(device, fence, 0);
 
-        for (std::size_t i = 0; i < renderFinishedSemaphores.size(); i++)
-            vkDestroySemaphore(device, renderFinishedSemaphores[i], 0);
+        for (VkSemaphore renderFinishedSemaphore : renderFinishedSemaphores)
+            vkDestroySemaphore(device, renderFinishedSemaphore, 0);
 
-        for (std::size_t i = 0; i < imageAvailableSemaphores.size(); i++)
-            vkDestroySemaphore(device, imageAvailableSemaphores[i], 0);
+        for (VkSemaphore imageAvailableSemaphore : imageAvailableSemaphores)
+            vkDestroySemaphore(device, imageAvailableSemaphore, 0);
 
         if (descriptorPool)
             vkDestroyDescriptorPool(device, descriptorPool, 0);
 
-        for (std::size_t i = 0; i < uniformBuffersMemory.size(); i++)
-            vkFreeMemory(device, uniformBuffersMemory[i], 0);
+        for (VkDeviceMemory i : uniformBuffersMemory)
+            vkFreeMemory(device, i, 0);
 
-        for (std::size_t i = 0; i < uniformBuffers.size(); i++)
-            vkDestroyBuffer(device, uniformBuffers[i], 0);
+        for (VkBuffer uniformBuffer : uniformBuffers)
+            vkDestroyBuffer(device, uniformBuffer, 0);
 
         if (textureSampler)
             vkDestroySampler(device, textureSampler, 0);
@@ -337,16 +341,16 @@ public:
     void cleanupSwapchain()
     {
         // Swapchain teardown procedure
-        for (std::size_t i = 0; i < fences.size(); i++)
-            vkWaitForFences(device, 1, &fences[i], VK_TRUE, std::numeric_limits<uint64_t>::max());
+        for (VkFence fence : fences)
+            vkWaitForFences(device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 
         if (commandBuffers.size())
-            vkFreeCommandBuffers(device, commandPool, commandBuffers.size(), &commandBuffers[0]);
+            vkFreeCommandBuffers(device, commandPool, static_cast<sf::Uint32>(commandBuffers.size()), commandBuffers.data());
 
         commandBuffers.clear();
 
-        for (std::size_t i = 0; i < swapchainFramebuffers.size(); i++)
-            vkDestroyFramebuffer(device, swapchainFramebuffers[i], 0);
+        for (VkFramebuffer swapchainFramebuffer : swapchainFramebuffers)
+            vkDestroyFramebuffer(device, swapchainFramebuffer, 0);
 
         swapchainFramebuffers.clear();
 
@@ -368,8 +372,8 @@ public:
         if (depthImage)
             vkDestroyImage(device, depthImage, 0);
 
-        for (std::size_t i = 0; i < swapchainImageViews.size(); i++)
-            vkDestroyImageView(device, swapchainImageViews[i], 0);
+        for (VkImageView swapchainImageView : swapchainImageViews)
+            vkDestroyImageView(device, swapchainImageView, 0);
 
         swapchainImageViews.clear();
 
@@ -424,7 +428,7 @@ public:
 
         layers.resize(objectCount);
 
-        if (vkEnumerateInstanceLayerProperties(&objectCount, &layers[0]) != VK_SUCCESS)
+        if (vkEnumerateInstanceLayerProperties(&objectCount, layers.data()) != VK_SUCCESS)
         {
             vulkanAvailable = false;
             return;
@@ -433,7 +437,7 @@ public:
         // Activate the layers we are interested in
         std::vector<const char*> validationLayers;
 
-        for (std::size_t i = 0; i < layers.size(); i++)
+        for (VkLayerProperties& layer : layers)
         {
             // VK_LAYER_LUNARG_standard_validation, meta-layer for the following layers:
             // -- VK_LAYER_GOOGLE_threading
@@ -446,11 +450,11 @@ public:
             // -- VK_LAYER_GOOGLE_unique_objects
             // These layers perform error checking and warn about bad or sub-optimal Vulkan API usage
             // VK_LAYER_LUNARG_monitor appends an FPS counter to the window title
-            if (!std::strcmp(layers[i].layerName, "VK_LAYER_LUNARG_standard_validation"))
+            if (!std::strcmp(layer.layerName, "VK_LAYER_LUNARG_standard_validation"))
             {
                 validationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
             }
-            else if (!std::strcmp(layers[i].layerName, "VK_LAYER_LUNARG_monitor"))
+            else if (!std::strcmp(layer.layerName, "VK_LAYER_LUNARG_monitor"))
             {
                 validationLayers.push_back("VK_LAYER_LUNARG_monitor");
             }
@@ -472,10 +476,10 @@ public:
         VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo();
         instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instanceCreateInfo.pApplicationInfo = &applicationInfo;
-        instanceCreateInfo.enabledLayerCount = validationLayers.size();
-        instanceCreateInfo.ppEnabledLayerNames = &validationLayers[0];
-        instanceCreateInfo.enabledExtensionCount = requiredExtentions.size();
-        instanceCreateInfo.ppEnabledExtensionNames = &requiredExtentions[0];
+        instanceCreateInfo.enabledLayerCount = static_cast<sf::Uint32>(validationLayers.size());
+        instanceCreateInfo.ppEnabledLayerNames = validationLayers.data();
+        instanceCreateInfo.enabledExtensionCount = static_cast<sf::Uint32>(requiredExtentions.size());
+        instanceCreateInfo.ppEnabledExtensionNames = requiredExtentions.data();
 
         // Try to create a Vulkan instance with debug report enabled
         VkResult result = vkCreateInstance(&instanceCreateInfo, 0, &instance);
@@ -485,8 +489,8 @@ public:
         {
             requiredExtentions.pop_back();
 
-            instanceCreateInfo.enabledExtensionCount = requiredExtentions.size();
-            instanceCreateInfo.ppEnabledExtensionNames = &requiredExtentions[0];
+            instanceCreateInfo.enabledExtensionCount = static_cast<sf::Uint32>(requiredExtentions.size());
+            instanceCreateInfo.ppEnabledExtensionNames = requiredExtentions.data();
 
             result = vkCreateInstance(&instanceCreateInfo, 0, &instance);
         }
@@ -553,21 +557,21 @@ public:
 
         devices.resize(objectCount);
 
-        if (vkEnumeratePhysicalDevices(instance, &objectCount, &devices[0]) != VK_SUCCESS)
+        if (vkEnumeratePhysicalDevices(instance, &objectCount, devices.data()) != VK_SUCCESS)
         {
             vulkanAvailable = false;
             return;
         }
 
         // Look for a GPU that supports swapchains
-        for (std::size_t i = 0; i < devices.size(); i++)
+        for (VkPhysicalDevice dev : devices)
         {
             VkPhysicalDeviceProperties deviceProperties;
-            vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
+            vkGetPhysicalDeviceProperties(dev, &deviceProperties);
 
             std::vector<VkExtensionProperties> extensions;
 
-            if (vkEnumerateDeviceExtensionProperties(devices[i], 0, &objectCount, 0) != VK_SUCCESS)
+            if (vkEnumerateDeviceExtensionProperties(dev, 0, &objectCount, 0) != VK_SUCCESS)
             {
                 vulkanAvailable = false;
                 return;
@@ -575,7 +579,7 @@ public:
 
             extensions.resize(objectCount);
 
-            if (vkEnumerateDeviceExtensionProperties(devices[i], 0, &objectCount, &extensions[0]) != VK_SUCCESS)
+            if (vkEnumerateDeviceExtensionProperties(dev, 0, &objectCount, extensions.data()) != VK_SUCCESS)
             {
                 vulkanAvailable = false;
                 return;
@@ -583,9 +587,9 @@ public:
 
             bool supportsSwapchain = false;
 
-            for (std::size_t j = 0; j < extensions.size(); j++)
+            for (VkExtensionProperties& extension : extensions)
             {
-                if (!std::strcmp(extensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME))
+                if (!std::strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME))
                 {
                     supportsSwapchain = true;
                     break;
@@ -598,12 +602,12 @@ public:
             // Prefer discrete over integrated GPUs if multiple are available
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             {
-                gpu = devices[i];
+                gpu = dev;
                 break;
             }
             else if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
             {
-                gpu = devices[i];
+                gpu = dev;
             }
         }
 
@@ -659,17 +663,17 @@ public:
 
         queueFamilyProperties.resize(objectCount);
 
-        vkGetPhysicalDeviceQueueFamilyProperties(gpu, &objectCount, &queueFamilyProperties[0]);
+        vkGetPhysicalDeviceQueueFamilyProperties(gpu, &objectCount, queueFamilyProperties.data());
 
-        for (std::size_t i = 0; i < queueFamilyProperties.size(); i++)
+        for (std::size_t i = 0; i < queueFamilyProperties.size(); ++i)
         {
             VkBool32 surfaceSupported = VK_FALSE;
 
-            vkGetPhysicalDeviceSurfaceSupportKHR(gpu, i, surface, &surfaceSupported);
+            vkGetPhysicalDeviceSurfaceSupportKHR(gpu, static_cast<sf::Uint32>(i), surface, &surfaceSupported);
 
             if ((queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (surfaceSupported == VK_TRUE))
             {
-                queueFamilyIndex = i;
+                queueFamilyIndex = static_cast<int>(i);
                 break;
             }
         }
@@ -685,7 +689,7 @@ public:
         VkDeviceQueueCreateInfo deviceQueueCreateInfo = VkDeviceQueueCreateInfo();
         deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         deviceQueueCreateInfo.queueCount = 1;
-        deviceQueueCreateInfo.queueFamilyIndex = queueFamilyIndex;
+        deviceQueueCreateInfo.queueFamilyIndex = static_cast<uint32_t>(queueFamilyIndex);
         deviceQueueCreateInfo.pQueuePriorities = &queuePriority;
 
         // Enable the swapchain extension
@@ -711,7 +715,7 @@ public:
         }
 
         // Retrieve a handle to the logical device command queue
-        vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
+        vkGetDeviceQueue(device, static_cast<uint32_t>(queueFamilyIndex), 0, &queue);
     }
 
     // Query surface formats and set up swapchain
@@ -730,7 +734,7 @@ public:
 
         surfaceFormats.resize(objectCount);
 
-        if (vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &objectCount, &surfaceFormats[0]) != VK_SUCCESS)
+        if (vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &objectCount, surfaceFormats.data()) != VK_SUCCESS)
         {
             vulkanAvailable = false;
             return;
@@ -743,9 +747,9 @@ public:
         }
         else if (!surfaceFormats.empty())
         {
-            for (std::size_t i = 0; i < surfaceFormats.size(); i++)
+            for (VkSurfaceFormatKHR& surfaceFormat : surfaceFormats)
             {
-                if ((surfaceFormats[i].format == VK_FORMAT_B8G8R8A8_UNORM) && (surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR))
+                if ((surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM) && (surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR))
                 {
                     swapchainFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
                     swapchainFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
@@ -774,7 +778,7 @@ public:
 
         presentModes.resize(objectCount);
 
-        if (vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &objectCount, &presentModes[0]) != VK_SUCCESS)
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &objectCount, presentModes.data()) != VK_SUCCESS)
         {
             vulkanAvailable = false;
             return;
@@ -783,11 +787,11 @@ public:
         // Prefer mailbox over FIFO if it is available
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
 
-        for (std::size_t i = 0; i < presentModes.size(); i++)
+        for (VkPresentModeKHR& i : presentModes)
         {
-            if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+            if (i == VK_PRESENT_MODE_MAILBOX_KHR)
             {
-                presentMode = presentModes[i];
+                presentMode = i;
                 break;
             }
         }
@@ -804,7 +808,7 @@ public:
         swapchainExtent.width  = clamp<uint32_t>(window.getSize().x, surfaceCapabilities.minImageExtent.width,  surfaceCapabilities.maxImageExtent.width);
         swapchainExtent.height = clamp<uint32_t>(window.getSize().y, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
 
-        uint32_t imageCount = clamp<uint32_t>(2, surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount);
+        auto imageCount = clamp<uint32_t>(2, surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount);
 
         VkSwapchainCreateInfoKHR swapchainCreateInfo = VkSwapchainCreateInfoKHR();
         swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -845,7 +849,7 @@ public:
         swapchainImages.resize(objectCount);
         swapchainImageViews.resize(objectCount);
 
-        if (vkGetSwapchainImagesKHR(device, swapchain, &objectCount, &swapchainImages[0]) != VK_SUCCESS)
+        if (vkGetSwapchainImagesKHR(device, swapchain, &objectCount, swapchainImages.data()) != VK_SUCCESS)
         {
             vulkanAvailable = false;
             return;
@@ -866,7 +870,7 @@ public:
         imageViewCreateInfo.subresourceRange.layerCount = 1;
 
         // Create an image view for each swapchain image
-        for (std::size_t i = 0; i < swapchainImages.size(); i++)
+        for (std::size_t i = 0; i < swapchainImages.size(); ++i)
         {
             imageViewCreateInfo.image = swapchainImages[i];
 
@@ -894,16 +898,16 @@ public:
                 return;
             }
 
-            std::vector<char> buffer(static_cast<std::size_t>(file.getSize()));
+            std::vector<uint32_t> buffer(static_cast<std::size_t>(file.getSize()) / sizeof(uint32_t));
 
-            if (file.read(&buffer[0], file.getSize()) != file.getSize())
+            if (file.read(buffer.data(), file.getSize()) != file.getSize())
             {
                 vulkanAvailable = false;
                 return;
             }
 
-            shaderModuleCreateInfo.codeSize = buffer.size();
-            shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(&buffer[0]);
+            shaderModuleCreateInfo.codeSize = buffer.size() * sizeof(uint32_t);
+            shaderModuleCreateInfo.pCode = buffer.data();
 
             if (vkCreateShaderModule(device, &shaderModuleCreateInfo, 0, &vertexShaderModule) != VK_SUCCESS)
             {
@@ -922,16 +926,16 @@ public:
                 return;
             }
 
-            std::vector<char> buffer(static_cast<std::size_t>(file.getSize()));
+            std::vector<uint32_t> buffer(static_cast<std::size_t>(file.getSize()) / sizeof(uint32_t));
 
-            if (file.read(&buffer[0], file.getSize()) != file.getSize())
+            if (file.read(buffer.data(), file.getSize()) != file.getSize())
             {
                 vulkanAvailable = false;
                 return;
             }
 
-            shaderModuleCreateInfo.codeSize = buffer.size();
-            shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(&buffer[0]);
+            shaderModuleCreateInfo.codeSize = buffer.size() * sizeof(uint32_t);
+            shaderModuleCreateInfo.pCode = buffer.data();
 
             if (vkCreateShaderModule(device, &shaderModuleCreateInfo, 0, &fragmentShaderModule) != VK_SUCCESS)
             {
@@ -981,22 +985,20 @@ public:
         attachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-        VkAttachmentReference attachmentReferences[2];
+        VkAttachmentReference colorAttachmentReference = {};
+        colorAttachmentReference.attachment = 0;
+        colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        attachmentReferences[0] = VkAttachmentReference();
-        attachmentReferences[0].attachment = 0;
-        attachmentReferences[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        attachmentReferences[1] = VkAttachmentReference();
-        attachmentReferences[1].attachment = 1;
-        attachmentReferences[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        VkAttachmentReference depthStencilAttachmentReference = {};
+        depthStencilAttachmentReference.attachment = 1;
+        depthStencilAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         // Set up the renderpass to depend on commands that execute before the renderpass begins
         VkSubpassDescription subpassDescription = VkSubpassDescription();
         subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpassDescription.colorAttachmentCount = 1;
-        subpassDescription.pColorAttachments = &attachmentReferences[0];
-        subpassDescription.pDepthStencilAttachment = &attachmentReferences[1];
+        subpassDescription.pColorAttachments = &colorAttachmentReference;
+        subpassDescription.pDepthStencilAttachment = &depthStencilAttachmentReference;
 
         VkSubpassDependency subpassDependency = VkSubpassDependency();
         subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -1218,7 +1220,7 @@ public:
         framebufferCreateInfo.height = swapchainExtent.height;
         framebufferCreateInfo.layers = 1;
 
-        for (std::size_t i = 0; i < swapchainFramebuffers.size(); i++)
+        for (std::size_t i = 0; i < swapchainFramebuffers.size(); ++i)
         {
             // Each framebuffer consists of a corresponding swapchain image and the shared depth image
             VkImageView attachments[] = {swapchainImageViews[i], depthImageView};
@@ -1240,7 +1242,7 @@ public:
         // We want to be able to reset command buffers after submitting them
         VkCommandPoolCreateInfo commandPoolCreateInfo = VkCommandPoolCreateInfo();
         commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+        commandPoolCreateInfo.queueFamilyIndex = static_cast<uint32_t>(queueFamilyIndex);
         commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
         // Create our command pool
@@ -1275,9 +1277,9 @@ public:
 
         uint32_t memoryType = 0;
 
-        for (; memoryType < memoryProperties.memoryTypeCount; memoryType++)
+        for (; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
         {
-            if ((memoryRequirements.memoryTypeBits & (1 << memoryType)) &&
+            if ((memoryRequirements.memoryTypeBits & static_cast<unsigned int>(1 << memoryType)) &&
                 ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
                 break;
         }
@@ -1544,7 +1546,7 @@ public:
     void setupUniformBuffers()
     {
         // Create a uniform buffer for every frame that might be in flight to prevent clobbering
-        for (size_t i = 0; i < swapchainImages.size(); i++)
+        for (size_t i = 0; i < swapchainImages.size(); ++i)
         {
             uniformBuffers.push_back(0);
             uniformBuffersMemory.push_back(0);
@@ -1597,9 +1599,9 @@ public:
 
         uint32_t memoryType = 0;
 
-        for (; memoryType < memoryProperties.memoryTypeCount; memoryType++)
+        for (; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
         {
-            if ((memoryRequirements.memoryTypeBits & (1 << memoryType)) &&
+            if ((memoryRequirements.memoryTypeBits & static_cast<unsigned int>(1 << memoryType)) &&
                 ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
                 break;
         }
@@ -1777,7 +1779,7 @@ public:
         }
 
         // Copy the image data into the buffer
-        std::memcpy(ptr, imageData.getPixelsPtr(), static_cast<size_t>(imageSize));
+        std::memcpy(ptr, imageData.getPixelsPtr(), static_cast<std::size_t>(imageSize));
 
         // Unmap the buffer
         vkUnmapMemory(device, stagingBufferMemory);
@@ -2109,11 +2111,11 @@ public:
         descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         descriptorSetAllocateInfo.descriptorPool = descriptorPool;
         descriptorSetAllocateInfo.descriptorSetCount = static_cast<uint32_t>(swapchainImages.size());
-        descriptorSetAllocateInfo.pSetLayouts = &descriptorSetLayouts[0];
+        descriptorSetAllocateInfo.pSetLayouts = descriptorSetLayouts.data();
 
         descriptorSets.resize(swapchainImages.size());
 
-        if (vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets[0]) != VK_SUCCESS)
+        if (vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets.data()) != VK_SUCCESS)
         {
             descriptorSets.clear();
 
@@ -2122,7 +2124,7 @@ public:
         }
 
         // For every descriptor set, set up the bindings to our uniform buffer and texture sampler
-        for (std::size_t i = 0; i < descriptorSets.size(); i++)
+        for (std::size_t i = 0; i < descriptorSets.size(); ++i)
         {
             VkWriteDescriptorSet writeDescriptorSets[2];
 
@@ -2175,7 +2177,7 @@ public:
         commandBufferAllocateInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
         // Allocate the command buffers from our command pool
-        if (vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffers[0]) != VK_SUCCESS)
+        if (vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffers.data()) != VK_SUCCESS)
         {
             commandBuffers.clear();
             vulkanAvailable = false;
@@ -2216,7 +2218,7 @@ public:
         commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
         // Set up the command buffers for each frame in flight
-        for (std::size_t i = 0; i < commandBuffers.size(); i++)
+        for (std::size_t i = 0; i < commandBuffers.size(); ++i)
         {
             // Begin the command buffer
             if (vkBeginCommandBuffer(commandBuffers[i], &commandBufferBeginInfo) != VK_SUCCESS)
@@ -2266,7 +2268,7 @@ public:
         semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
         // Create a semaphore to track when an swapchain image is available for each frame in flight
-        for (int i = 0; i < maxFramesInFlight; i++)
+        for (std::size_t i = 0; i < maxFramesInFlight; ++i)
         {
             imageAvailableSemaphores.push_back(0);
 
@@ -2279,7 +2281,7 @@ public:
         }
 
         // Create a semaphore to track when rendering is complete for each frame in flight
-        for (int i = 0; i < maxFramesInFlight; i++)
+        for (std::size_t i = 0; i < maxFramesInFlight; ++i)
         {
             renderFinishedSemaphores.push_back(0);
 
@@ -2301,7 +2303,7 @@ public:
         fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         // Create a fence to track when queue submission is complete for each frame in flight
-        for (int i = 0; i < maxFramesInFlight; i++)
+        for (std::size_t i = 0; i < maxFramesInFlight; ++i)
         {
             fences.push_back(0);
 
@@ -2317,23 +2319,23 @@ public:
     // Update the matrices in our uniform buffer every frame
     void updateUniformBuffer(float elapsed)
     {
-        const float pi = 3.14159265359f;
-
         // Construct the model matrix
         Matrix model = {
-            1.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
+            { 1.0f, 0.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f, 0.0f },
+            { 0.0f, 0.0f, 1.0f, 0.0f },
+            { 0.0f, 0.0f, 0.0f, 1.0f }
         };
 
-        matrixRotateX(model, elapsed * 59.0f  * pi / 180.f);
-        matrixRotateY(model, elapsed * 83.0f  * pi / 180.f);
-        matrixRotateZ(model, elapsed * 109.0f * pi / 180.f);
+        matrixRotateX(model, sf::degrees(elapsed * 59.0f));
+        matrixRotateY(model, sf::degrees(elapsed * 83.0f));
+        matrixRotateZ(model, sf::degrees(elapsed * 109.0f));
 
         // Translate the model based on the mouse position
-        float x = clamp( sf::Mouse::getPosition(window).x * 2.f / window.getSize().x - 1.f, -1.0f, 1.0f) * 2.0f;
-        float y = clamp(-sf::Mouse::getPosition(window).y * 2.f / window.getSize().y + 1.f, -1.0f, 1.0f) * 1.5f;
+        sf::Vector2f mousePosition = sf::Vector2f(sf::Mouse::getPosition(window));
+        sf::Vector2f windowSize = sf::Vector2f(window.getSize());
+        float x = clamp( mousePosition.x * 2.f / windowSize.x - 1.f, -1.0f, 1.0f) * 2.0f;
+        float y = clamp(-mousePosition.y * 2.f / windowSize.y + 1.f, -1.0f, 1.0f) * 1.5f;
 
         model[3][0] -= x;
         model[3][2] += y;
@@ -2348,14 +2350,14 @@ public:
         matrixLookAt(view, eye, center, up);
 
         // Construct the projection matrix
-        const float fov = 45.0f;
+        const sf::Angle fov = sf::degrees(45);
         const float aspect = static_cast<float>(swapchainExtent.width) / static_cast<float>(swapchainExtent.height);
         const float nearPlane = 0.1f;
         const float farPlane = 10.0f;
 
         Matrix projection;
 
-        matrixPerspective(projection, fov * pi / 180.f, aspect, nearPlane, farPlane);
+        matrixPerspective(projection, fov, aspect, nearPlane, farPlane);
 
         char* ptr;
 
@@ -2477,7 +2479,8 @@ public:
                     swapchainOutOfDate = true;
             }
 
-            if (vulkanAvailable)
+            // Check that window was not closed before drawing to it
+            if (vulkanAvailable && window.isOpen())
             {
                 // Update the uniform buffer (matrices)
                 updateUniformBuffer(clock.getElapsedTime().asSeconds());
@@ -2493,8 +2496,8 @@ private:
 
     bool vulkanAvailable;
 
-    const int maxFramesInFlight;
-    int currentFrame;
+    const unsigned int maxFramesInFlight;
+    unsigned int currentFrame;
     bool swapchainOutOfDate;
 
     VkInstance instance;

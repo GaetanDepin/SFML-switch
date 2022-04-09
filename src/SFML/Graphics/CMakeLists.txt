@@ -6,8 +6,8 @@ set(SRCROOT ${PROJECT_SOURCE_DIR}/src/SFML/Graphics)
 set(SRC
     ${SRCROOT}/BlendMode.cpp
     ${INCROOT}/BlendMode.hpp
-    ${SRCROOT}/Color.cpp
     ${INCROOT}/Color.hpp
+    ${INCROOT}/Color.inl
     ${INCROOT}/Export.hpp
     ${SRCROOT}/Font.cpp
     ${INCROOT}/Font.hpp
@@ -42,12 +42,13 @@ set(SRC
     ${SRCROOT}/TextureSaver.hpp
     ${SRCROOT}/Transform.cpp
     ${INCROOT}/Transform.hpp
+    ${INCROOT}/Transform.inl
     ${SRCROOT}/Transformable.cpp
     ${INCROOT}/Transformable.hpp
     ${SRCROOT}/View.cpp
     ${INCROOT}/View.hpp
-    ${SRCROOT}/Vertex.cpp
     ${INCROOT}/Vertex.hpp
+    ${INCROOT}/Vertex.inl
 )
 source_group("" FILES ${SRC})
 
@@ -86,28 +87,28 @@ source_group("render texture" FILES ${RENDER_TEXTURE_SRC})
 
 
 # define the sfml-graphics target
-sfml_add_library(sfml-graphics
+sfml_add_library(Graphics
                  SOURCES ${SRC} ${DRAWABLES_SRC} ${RENDER_TEXTURE_SRC} ${STB_SRC})
 
 # setup dependencies
-target_link_libraries(sfml-graphics PUBLIC sfml-window)
+target_link_libraries(sfml-graphics PUBLIC SFML::Window)
 
 # stb_image sources
-target_include_directories(sfml-graphics PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/stb_image")
+target_include_directories(sfml-graphics SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/stb_image")
 
 # glad sources
-target_include_directories(sfml-graphics PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/glad/include")
+target_include_directories(sfml-graphics SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/glad/include")
 
 # let CMake know about our additional graphics libraries paths
 if(SFML_OS_WINDOWS)
-    set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
+    list(APPEND CMAKE_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
 elseif(SFML_OS_MACOSX)
-    set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
-    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${PROJECT_SOURCE_DIR}/extlibs/libs-osx/Frameworks")
+    list(APPEND CMAKE_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
+    list(APPEND CMAKE_LIBRARY_PATH "${PROJECT_SOURCE_DIR}/extlibs/libs-osx/Frameworks")
 elseif(SFML_OS_IOS)
-    set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
+    list(APPEND CMAKE_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
 elseif(SFML_OS_ANDROID)
-    set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
+    list(APPEND CMAKE_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extlibs/headers/freetype2")
 endif()
 
 # find external libraries
@@ -115,6 +116,12 @@ if(SFML_OS_ANDROID)
     target_link_libraries(sfml-graphics PRIVATE z)
 elseif(SFML_OS_IOS)
     target_link_libraries(sfml-graphics PRIVATE z bz2)
+endif()
+
+# starting from Visual Studio 2015, inline versions of some C functions are used; for compatibility link this library
+# see https://docs.microsoft.com/en-us/cpp/porting/overview-of-potential-upgrade-issues-visual-cpp?view=msvc-160#libraries
+if(SFML_COMPILER_MSVC OR (SFML_COMPILER_CLANG AND SFML_OS_WINDOWS AND NOT MINGW))
+    target_link_libraries(sfml-graphics PRIVATE legacy_stdio_definitions.lib)
 endif()
 
 sfml_find_package(Freetype INCLUDE "FREETYPE_INCLUDE_DIRS" LINK "FREETYPE_LIBRARY")

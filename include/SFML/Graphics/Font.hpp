@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2019 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2022 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -32,12 +32,18 @@
 #include <SFML/Graphics/Glyph.hpp>
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Rect.hpp>
-#include <SFML/System/Vector2.hpp>
-#include <SFML/System/String.hpp>
-#include <map>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
+
+#ifdef SFML_SYSTEM_ANDROID
+namespace sf::priv
+{
+class ResourceStream;
+}
+#endif
 
 namespace sf
 {
@@ -79,6 +85,18 @@ public:
     Font(const Font& copy);
 
     ////////////////////////////////////////////////////////////
+    /// \brief Move constructor
+    ///
+    ////////////////////////////////////////////////////////////
+    Font(Font&&) noexcept;
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Move assignment
+    ///
+    ////////////////////////////////////////////////////////////
+    Font& operator=(Font&&) noexcept;
+
+    ////////////////////////////////////////////////////////////
     /// \brief Destructor
     ///
     /// Cleans up all the internal resources used by the font
@@ -106,7 +124,7 @@ public:
     /// \see loadFromMemory, loadFromStream
     ///
     ////////////////////////////////////////////////////////////
-    bool loadFromFile(const std::string& filename);
+    [[nodiscard]] bool loadFromFile(const std::filesystem::path& filename);
 
     ////////////////////////////////////////////////////////////
     /// \brief Load the font from a file in memory
@@ -127,7 +145,7 @@ public:
     /// \see loadFromFile, loadFromStream
     ///
     ////////////////////////////////////////////////////////////
-    bool loadFromMemory(const void* data, std::size_t sizeInBytes);
+    [[nodiscard]] bool loadFromMemory(const void* data, std::size_t sizeInBytes);
 
     ////////////////////////////////////////////////////////////
     /// \brief Load the font from a custom stream
@@ -149,7 +167,7 @@ public:
     /// \see loadFromFile, loadFromMemory
     ///
     ////////////////////////////////////////////////////////////
-    bool loadFromStream(InputStream& stream);
+    [[nodiscard]] bool loadFromStream(InputStream& stream);
 
     ////////////////////////////////////////////////////////////
     /// \brief Get the font information
@@ -217,7 +235,7 @@ public:
     /// \return Kerning value for \a first and \a second, in pixels
     ///
     ////////////////////////////////////////////////////////////
-    float getKerning(Uint32 first, Uint32 second, unsigned int characterSize) const;
+    float getKerning(Uint32 first, Uint32 second, unsigned int characterSize, bool bold = false) const;
 
     ////////////////////////////////////////////////////////////
     /// \brief Get the line spacing
@@ -276,6 +294,32 @@ public:
     const Texture& getTexture(unsigned int characterSize) const;
 
     ////////////////////////////////////////////////////////////
+    /// \brief Enable or disable the smooth filter
+    ///
+    /// When the filter is activated, the font appears smoother
+    /// so that pixels are less noticeable. However if you want
+    /// the font to look exactly the same as its source file,
+    /// you should disable it.
+    /// The smooth filter is enabled by default.
+    ///
+    /// \param smooth True to enable smoothing, false to disable it
+    ///
+    /// \see isSmooth
+    ///
+    ////////////////////////////////////////////////////////////
+    void setSmooth(bool smooth);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Tell whether the smooth filter is enabled or not
+    ///
+    /// \return True if smoothing is enabled, false if it is disabled
+    ///
+    /// \see setSmooth
+    ///
+    ////////////////////////////////////////////////////////////
+    bool isSmooth() const;
+
+    ////////////////////////////////////////////////////////////
     /// \brief Overload of assignment operator
     ///
     /// \param right Instance to assign
@@ -303,7 +347,7 @@ private:
     ////////////////////////////////////////////////////////////
     // Types
     ////////////////////////////////////////////////////////////
-    typedef std::map<Uint64, Glyph> GlyphTable; //!< Table mapping a codepoint to its glyph
+    using GlyphTable = std::unordered_map<Uint64, Glyph>; //!< Table mapping a codepoint to its glyph
 
     ////////////////////////////////////////////////////////////
     /// \brief Structure defining a page of glyphs
@@ -358,26 +402,24 @@ private:
     /// \return True on success, false if any error happened
     ///
     ////////////////////////////////////////////////////////////
-    bool setCurrentSize(unsigned int characterSize) const;
+    [[nodiscard]] bool setCurrentSize(unsigned int characterSize) const;
 
     ////////////////////////////////////////////////////////////
     // Types
     ////////////////////////////////////////////////////////////
-    typedef std::map<unsigned int, Page> PageTable; //!< Table mapping a character size to its page (texture)
+    class FontHandles;
+    using PageTable = std::unordered_map<unsigned int, Page>; //!< Table mapping a character size to its page (texture)
 
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    void*                      m_library;     //!< Pointer to the internal library interface (it is typeless to avoid exposing implementation details)
-    void*                      m_face;        //!< Pointer to the internal font face (it is typeless to avoid exposing implementation details)
-    void*                      m_streamRec;   //!< Pointer to the stream rec instance (it is typeless to avoid exposing implementation details)
-    void*                      m_stroker;     //!< Pointer to the stroker (it is typeless to avoid exposing implementation details)
-    int*                       m_refCount;    //!< Reference counter used by implicit sharing
-    Info                       m_info;        //!< Information about the font
-    mutable PageTable          m_pages;       //!< Table containing the glyphs pages by character size
-    mutable std::vector<Uint8> m_pixelBuffer; //!< Pixel buffer holding a glyph's pixels before being written to the texture
+    std::shared_ptr<FontHandles>          m_fontHandles; //!< Shared information about the internal font instance
+    bool                                  m_isSmooth;    //!< Status of the smooth filter
+    Info                                  m_info;        //!< Information about the font
+    mutable PageTable                     m_pages;       //!< Table containing the glyphs pages by character size
+    mutable std::vector<Uint8>            m_pixelBuffer; //!< Pixel buffer holding a glyph's pixels before being written to the texture
     #ifdef SFML_SYSTEM_ANDROID
-    void*                      m_stream; //!< Asset file streamer (if loaded from file)
+    std::unique_ptr<priv::ResourceStream> m_stream;      //!< Asset file streamer (if loaded from file)
     #endif
 };
 

@@ -2,13 +2,17 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Window.hpp>
+#include <cstdlib>
 
 #define GLAD_GL_IMPLEMENTATION
-#include "gl.h"
+#include <gl.h>
 
 #ifdef SFML_SYSTEM_IOS
 #include <SFML/Main.hpp>
 #endif
+
+#include <iostream>
+#include <cstdlib>
 
 ////////////////////////////////////////////////////////////
 /// Entry point of application
@@ -26,7 +30,11 @@ int main()
     sf::Window window(sf::VideoMode(640, 480), "SFML window with OpenGL", sf::Style::Default, contextSettings);
 
     // Make it the active window for OpenGL calls
-    window.setActive();
+    if (!window.setActive())
+    {
+        std::cerr << "Failed to set the window as active" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     // Load OpenGL or OpenGL ES entry points using glad
 #ifdef SFML_OPENGL_ES
@@ -52,12 +60,12 @@ int main()
     glDisable(GL_TEXTURE_2D);
 
     // Configure the viewport (the same size as the window)
-    glViewport(0, 0, window.getSize().x, window.getSize().y);
+    glViewport(0, 0, static_cast<GLsizei>(window.getSize().x), static_cast<GLsizei>(window.getSize().y));
 
     // Setup a perspective projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    GLfloat ratio = static_cast<float>(window.getSize().x) / window.getSize().y;
+    GLfloat ratio = static_cast<float>(window.getSize().x) / static_cast<float>(window.getSize().y);
 #ifdef SFML_OPENGL_ES
     glFrustumf(-ratio, ratio, -1.f, 1.f, 1.f, 500.f);
 #else
@@ -142,14 +150,14 @@ int main()
             // Resize event: adjust the viewport
             if (event.type == sf::Event::Resized)
             {
-                glViewport(0, 0, event.size.width, event.size.height);
+                glViewport(0, 0, static_cast<GLsizei>(event.size.width), static_cast<GLsizei>(event.size.height));
                 glMatrixMode(GL_PROJECTION);
                 glLoadIdentity();
-                GLfloat ratio = static_cast<float>(event.size.width) / event.size.height;
+                GLfloat newRatio = static_cast<float>(event.size.width) / static_cast<float>(event.size.height);
 #ifdef SFML_OPENGL_ES
-                glFrustumf(-ratio, ratio, -1.f, 1.f, 1.f, 500.f);
+                glFrustumf(-newRatio, newRatio, -1.f, 1.f, 1.f, 500.f);
 #else
-                glFrustum(-ratio, ratio, -1.f, 1.f, 1.f, 500.f);
+                glFrustum(-newRatio, newRatio, -1.f, 1.f, 1.f, 500.f);
 #endif
             }
         }
