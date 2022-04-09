@@ -42,22 +42,23 @@
 // We check for this definition in order to avoid multiple definitions of GLAD
 // entities during unity builds of SFML.
 #ifndef SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
-#define SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
-#define SF_GLAD_EGL_IMPLEMENTATION
+    #define SF_GLAD_EGL_IMPLEMENTATION_INCLUDED
+    #define SF_GLAD_EGL_IMPLEMENTATION
 
-#if defined(SFML_SYSTEM_SWITCH)
-#include <switch.h>
-#include <EGL/egl.h>    // EGL library
-#include <EGL/eglext.h> // EGL extensions
-#include <glad/glad.h>  // glad library (OpenGL loader)
+    #if defined(SFML_SYSTEM_SWITCH)
+        #include <switch.h>
+        #include <EGL/egl.h>    // EGL library
+        #include <EGL/eglext.h> // EGL extensions
+        #include <glad/glad.h>  // glad library (OpenGL loader)
 
-static int gladLoaderLoadEGL(EGLDisplay display)
-{
-    return gladLoadGL();
-}
+        static int gladLoaderLoadEGL(EGLDisplay display)
+        {
+            return gladLoadGL();
+        }
 
-#else
-#include <glad/egl.h>
+    #else
+        #include <glad/egl.h>
+    #endif
 #endif
 
 namespace

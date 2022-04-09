@@ -31,8 +31,9 @@ mkdir build
 2. Run CMake to generate makefile:
 
 ```bash
-cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/DevkitA64Libnx.cmake
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/DevkitA64Libnx.cmake -DWARNINGS_AS_ERRORS=FALSE
 ```
+`-DWARNINGS_AS_ERRORS=FALSE` is required otherwises it doesn't compile because of error in libnx header
 
 3. Build binaries:
 

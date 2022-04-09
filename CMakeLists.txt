@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 
 # FOR DEVELOPMENT
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/toolchains/DevkitA64Libnx.cmake)
+set(CMAKE_CXX_STANDARD 20)
 
 # customize the compiler options CMake uses to initialize variables with
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerOptionsOverride.cmake")
