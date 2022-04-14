@@ -85,6 +85,7 @@ WindowHandle WindowImplSwitch::getSystemHandle() const
 void WindowImplSwitch::processEvents()
 {
     appletMainLoop();
+    processTouchscreenEvent();
 }
 
 
@@ -181,6 +182,60 @@ bool WindowImplSwitch::hasFocus() const
     return true;
 }
 
+void WindowImplSwitch::forwardEvent(const Event& event)
+{
+    WindowImplSwitch::singleInstance->pushEvent(event);
+}
+
+void WindowImplSwitch::processTouchscreenEvent()
+{
+    static HidTouchScreenState previous_state = {0};
+
+    HidTouchScreenState state={0};
+    if (hidGetTouchScreenStates(&state, 1)) {
+        for(s32 i=0; i < state.count; i++) {
+            bool found = false;
+            for (s32 y = 0; y < previous_state.count; y++) {
+                if (state.touches[i].finger_id == previous_state.touches[y].finger_id) {
+                    found = true;
+                    if (state.touches[i].x != previous_state.touches[y].x || state.touches[i].y != previous_state.touches[y].y) {
+                        Event evt;
+                        evt.type = Event::TouchMoved;
+                        evt.touch.finger = state.touches[i].finger_id;
+                        evt.touch.x = state.touches[i].x;
+                        evt.touch.y = state.touches[i].y;
+                        forwardEvent(evt);
+                    }
+                }
+            }
+            if (!found) {
+                Event evt;
+                evt.type = Event::TouchBegan;
+                evt.touch.finger = state.touches[i].finger_id;
+                evt.touch.x = state.touches[i].x;
+                evt.touch.y = state.touches[i].y;
+                forwardEvent(evt);
+            }
+        }
+        for(s32 i = 0; i < previous_state.count; i++) {
+            bool found = false;
+            for (s32 y = 0; y < state.count; y++) {
+                if (state.touches[i].finger_id == previous_state.touches[y].finger_id) {
+                    found = true;
+                }
+            }
+            if (!found) {
+                Event evt;
+                evt.type = Event::TouchEnded;
+                evt.touch.finger = state.touches[i].finger_id;
+                evt.touch.x = state.touches[i].x;
+                evt.touch.y = state.touches[i].y;
+                forwardEvent(evt);
+            }
+        }
+        previous_state = state;
+    }
+}
 
 
 } // namespace priv

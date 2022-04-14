@@ -60,6 +60,17 @@ static HidNpadButton KEYS_BY_INDEX[] = {
     HidNpadButton_RightSR,
 };
 
+static const u64 PAD_MASK[] = {
+    (1UL << HidNpadIdType_No1) | (1UL << HidNpadIdType_Handheld),
+    1UL << HidNpadIdType_No2,
+    1UL << HidNpadIdType_No3,
+    1UL << HidNpadIdType_No4,
+    1UL << HidNpadIdType_No5,
+    1UL << HidNpadIdType_No6,
+    1UL << HidNpadIdType_No7,
+    1UL << HidNpadIdType_No8,
+};
+
 enum {
     JOYSTICK_LEFT = 0,
     JOYSTICK_RIGHT = 1,
@@ -67,6 +78,7 @@ enum {
 
 #define NUM_KEYS_BY_INDEX ((int) (sizeof(KEYS_BY_INDEX) / sizeof(HidNpadButton)))
 
+#include <iostream>
 
 namespace sf
 {
@@ -75,7 +87,7 @@ namespace priv
 ////////////////////////////////////////////////////////////
 void JoystickImpl::initialize()
 {
-    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+    padConfigureInput(8, HidNpadStyleSet_NpadStandard);
 }
 
 
@@ -90,7 +102,8 @@ void JoystickImpl::cleanup()
 bool JoystickImpl::isConnected(unsigned int index)
 {
     PadState state;
-    padInitialize(&state, (HidNpadIdType)index);
+    padInitializeWithMask(&state, PAD_MASK[index]);
+    padUpdate(&state);
     return padIsConnected(&state);
 }
 
@@ -98,11 +111,10 @@ bool JoystickImpl::isConnected(unsigned int index)
 ////////////////////////////////////////////////////////////
 bool JoystickImpl::open(unsigned int index)
 {
-    if (!isConnected(index))
-        return (false);
-    m_padId = (HidNpadIdType)index;
-    padInitialize(&m_state, (HidNpadIdType)index);
-    return true;
+    m_padId = PAD_MASK[index];
+    padInitializeWithMask(&m_state, PAD_MASK[index]);
+    padUpdate(&m_state);
+    return padIsConnected(&m_state);
 }
 
 
@@ -142,7 +154,7 @@ JoystickState JoystickImpl::update()
     auto sfmlState = JoystickState();
     u64 keys = padGetButtonsDown(&m_state);
 
-    sfmlState.connected = isConnected(m_padId);
+    sfmlState.connected = padIsConnected(&m_state);
     for (int i = 0; i < NUM_KEYS_BY_INDEX; i++)
         sfmlState.buttons[i] = (keys & KEYS_BY_INDEX[i]) != 0;
 

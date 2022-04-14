@@ -189,6 +189,8 @@ public:
 
 protected:
 
+    static void processTouchscreenEvent();
+
     ////////////////////////////////////////////////////////////
     /// \brief Process incoming events from the operating system
     ///

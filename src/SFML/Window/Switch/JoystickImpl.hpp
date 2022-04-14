@@ -107,7 +107,7 @@ private:
     // Member data
     ////////////////////////////////////////////////////////////
     PadState m_state;
-    HidNpadIdType m_padId;
+    u64 m_padId;
 };
 
 } // namespace priv
