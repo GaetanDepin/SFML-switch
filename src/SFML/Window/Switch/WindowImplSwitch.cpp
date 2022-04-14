@@ -220,16 +220,16 @@ void WindowImplSwitch::processTouchscreenEvent()
         for(s32 i = 0; i < previous_state.count; i++) {
             bool found = false;
             for (s32 y = 0; y < state.count; y++) {
-                if (state.touches[i].finger_id == previous_state.touches[y].finger_id) {
+                if (previous_state.touches[i].finger_id == state.touches[y].finger_id) {
                     found = true;
                 }
             }
             if (!found) {
                 Event evt;
                 evt.type = Event::TouchEnded;
-                evt.touch.finger = state.touches[i].finger_id;
-                evt.touch.x = state.touches[i].x;
-                evt.touch.y = state.touches[i].y;
+                evt.touch.finger = previous_state.touches[i].finger_id;
+                evt.touch.x = previous_state.touches[i].x;
+                evt.touch.y = previous_state.touches[i].y;
                 forwardEvent(evt);
             }
         }
